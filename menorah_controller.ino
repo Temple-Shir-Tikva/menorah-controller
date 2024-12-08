@@ -1,19 +1,13 @@
 #include <EEPROM.h>
 
-// TODO the candles are not wired to the right pins ATM.
-
-#define CANDLE_1_PIN 6
-#define CANDLE_2_PIN 2
-#define CANDLE_3_PIN 8
-#define CANDLE_4_PIN 3
-#define CANDLE_5_PIN 2
-#define CANDLE_6_PIN 5
-#define CANDLE_7_PIN 4
-#define CANDLE_8_PIN 9
-
-// 1 2 3 4 5 6 7 8
-// 8 3 4 1 2 5 6 7
-// 9 8 3 3 2 4 5 4
+#define CANDLE_1_PIN 9
+#define CANDLE_2_PIN 8
+#define CANDLE_3_PIN 10 // pin 7 on the arduino is burnt out
+#define CANDLE_4_PIN 6
+#define CANDLE_5_PIN 5
+#define CANDLE_6_PIN 4
+#define CANDLE_7_PIN 3
+#define CANDLE_8_PIN 2
 
 #define BUTTON_PIN 13
 #define MILLIS_BUTTON_HOLD_DURATION 5000 // 5 seconds in milliseconds
