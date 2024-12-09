@@ -14,7 +14,7 @@
 #define MILLIS_MIN_BUTTON_HOLD_DURATION 100 // 100 milliseconds minimum to register a push
 
 #define MILLIS_OUTSIDE_TIMER_IS_ACTIVE 21600000 // 6 hours in milliseconds
-// #define MILLIS_OUTSIDE_TIMER_IS_ACTIVE 1000 // testing 5 seconds per day
+// #define MILLIS_OUTSIDE_TIMER_IS_ACTIVE 1000 // testing 1 second per day
 
 int buttonState = LOW;
 int buttonHoldTime = 0;
@@ -45,14 +45,13 @@ void setup() {
   buttonState = LOW;
   buttonHoldTime = millis();
   lightCandles();
-  
 }
 
 void loop() {
   // if this has been running for the duration of the outside timer, advance the day
-  if (millis() >= runStartTime + MILLIS_OUTSIDE_TIMER_IS_ACTIVE) {
-    advanceHanukkahDay();
+  if (millis() - runStartTime >= MILLIS_OUTSIDE_TIMER_IS_ACTIVE) {
     runStartTime = millis();
+    advanceHanukkahDay();
   }
   // check if the button state has changed since last loop
   checkButton();
@@ -86,7 +85,6 @@ void lightCandles() {
     {CANDLE_8_PIN, HIGH}
   };
 
-
   Serial.println((String)"Lighting Candles for Hanukkah day " + hanukkahDay);
 
   // say the prayers
@@ -97,7 +95,7 @@ void lightCandles() {
     Serial.println("בָּרוּךְ אַתָּה אֲדֹנָי אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם שֶׁהֶחֱיָנוּ וְקִיְּמָנוּ וְהִגִּיעָנוּ לִזְּמַן הַזֶּה");
   }
 
-  // set the candle state for each of the nights including this night to high
+  // set the candle state for each of the nights including this night to high, lighting from right to left
   for (int i = 7; i > 7 - hanukkahDay; i--) {
     candleStates[i][1] = LOW;
   }
