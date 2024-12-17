@@ -16,6 +16,9 @@ struct HanukkahDay {
 };
 
 const HanukkahDay hanukkahDays[] PROGMEM = {
+  // Testing
+  {0, 1, 16, 1}, {0, 1, 17, 2},
+  
   // 2024
   {0, 1, 25, 1}, {0, 1, 26, 2}, {0, 1, 27, 3}, {0, 1, 28, 4},
   {0, 1, 29, 5}, {0, 1, 30, 6}, {0, 1, 31, 7}, {1, 2, 1, 8}, // Corrected yearIndex to 1 for {1, 2, 1, 8}

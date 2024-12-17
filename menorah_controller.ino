@@ -20,8 +20,6 @@ byte hanukkahDay = 1;
 bool isActuallyHanukkah = false;
 
 void setup() {
-  Wire.begin();
-  Serial.begin(9600);
   pinMode(CANDLE_1_PIN, OUTPUT);
   pinMode(CANDLE_2_PIN, OUTPUT);
   pinMode(CANDLE_3_PIN, OUTPUT);
@@ -31,7 +29,13 @@ void setup() {
   pinMode(CANDLE_7_PIN, OUTPUT);
   pinMode(CANDLE_8_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT);
+  blankOutCandles();
+  Wire.begin();
+  Serial.begin(9600);
   
+  hanukkahDay = 0;
+  lightCandles();
+
   displayTime();
   setupMP3Player();
 
@@ -58,8 +62,11 @@ void getHanukkahDayFromTime() {
 void loop() {
   // check if the button state has changed since last loop, we want this available if we want to set the time
   checkButton();
+  byte lastHanukkahDay = hanukkahDay;
   getHanukkahDayFromTime();
-  lightCandles();
+  if (lastHanukkahDay != hanukkahDay) {
+    lightCandles();
+  }
 }
 
 void checkButton() {
@@ -69,6 +76,29 @@ void checkButton() {
       inputTime();
     }
     buttonState = buttonRead;
+  }
+}
+
+void blankOutCandles() {
+  struct CandleState {
+    byte pin;
+    bool state;
+  };
+
+  CandleState candleStates[] = {
+    {CANDLE_1_PIN, HIGH},
+    {CANDLE_2_PIN, HIGH},
+    {CANDLE_3_PIN, HIGH},
+    {CANDLE_4_PIN, HIGH},
+    {CANDLE_5_PIN, HIGH},
+    {CANDLE_6_PIN, HIGH},
+    {CANDLE_7_PIN, HIGH},
+    {CANDLE_8_PIN, HIGH}
+  };
+
+  // output the state of each candle to turn the relay on or off for each candle
+  for (byte i = 0; i < 8; i++) {
+    digitalWrite(candleStates[i].pin, candleStates[i].state);
   }
 }
 
