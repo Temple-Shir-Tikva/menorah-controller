@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#ifndef SERIAL_WAIT_TIME
+#define SERIAL_WAIT_TIME 100
+#endif
+
 /**
 Code originally from https://www.instructables.com/Using-DS1307-and-DS3231-Real-time-Clock-Modules-Wi/
 **/
@@ -19,6 +23,7 @@ byte bcdToDec(byte val) {
 
 byte getSerialInput(String message) {
   Serial.println(message);
+  delay(SERIAL_WAIT_TIME);
   while (Serial.available() == 0) {} // wait for the user to send something
   byte temp = Serial.parseInt();
   return temp;
@@ -64,47 +69,68 @@ void displayTime() {
   switch(dayOfWeek) {
   case 1:
     Serial.print("Sunday");
+    delay(SERIAL_WAIT_TIME);
     break;
   case 2:
     Serial.print("Monday");
+    delay(SERIAL_WAIT_TIME);
     break;
   case 3:
     Serial.print("Tuesday");
+    delay(SERIAL_WAIT_TIME);
     break;
   case 4:
     Serial.print("Wednesday");
+    delay(SERIAL_WAIT_TIME);
     break;
   case 5:
     Serial.print("Thursday");
+    delay(SERIAL_WAIT_TIME);
     break;
   case 6:
     Serial.print("Friday");
+    delay(SERIAL_WAIT_TIME);
     break;
   case 7:
     Serial.print("Saturday");
+    delay(SERIAL_WAIT_TIME);
     break;
   }
   Serial.print(" ");
+  delay(SERIAL_WAIT_TIME);
   Serial.print(month, DEC);
+  delay(SERIAL_WAIT_TIME);
   Serial.print("/");
+  delay(SERIAL_WAIT_TIME);
   Serial.print(dayOfMonth, DEC);
+  delay(SERIAL_WAIT_TIME);
   Serial.print("/");
+  delay(SERIAL_WAIT_TIME);
   Serial.print(year, DEC);
+  delay(SERIAL_WAIT_TIME);
   Serial.print(" ");
-  // send it to the serial monitor
+  delay(SERIAL_WAIT_TIME);
   Serial.print(hour, DEC);
+  delay(SERIAL_WAIT_TIME);
   // convert the byte variable to a decimal number when displayed
   Serial.print(":");
+  delay(SERIAL_WAIT_TIME);
   if (minute<10) {
     Serial.print("0");
+    delay(SERIAL_WAIT_TIME);
   }
   Serial.print(minute, DEC);
+  delay(SERIAL_WAIT_TIME);
   Serial.print(":");
+  delay(SERIAL_WAIT_TIME);
   if (second<10) {
     Serial.print("0");
+    delay(SERIAL_WAIT_TIME);
   }
   Serial.print(second, DEC);
+  delay(SERIAL_WAIT_TIME);
   Serial.println();
+  delay(SERIAL_WAIT_TIME);
 }
 
 void inputTime() {
@@ -120,5 +146,6 @@ void inputTime() {
   setTime(second, minute, hour, dayOfWeek, dayOfMonth, month, year);
 
   Serial.println("Time is now set to:");
+  delay(SERIAL_WAIT_TIME);
   displayTime();
 }

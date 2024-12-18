@@ -2,6 +2,10 @@
 #include <SoftwareSerial.h>
 #include "DFRobotDFPlayerMini.h"
 
+#ifndef SERIAL_WAIT_TIME
+#define SERIAL_WAIT_TIME 100
+#endif
+
 /**
  prayer files from 
   1st blessing https://www.youtube.com/watch?v=_fb-tkAet5A
@@ -31,10 +35,12 @@ void setupMP3Player() {
   myDFPlayer.outputDevice(DFPLAYER_DEVICE_SD);
 
   Serial.println("mp3 initialized");
+  delay(SERIAL_WAIT_TIME);
 }
 
 void playFile(int fileNumber) {
   Serial.println("Playing file " + fileNumber);
+  delay(SERIAL_WAIT_TIME);
   myDFPlayer.play(fileNumber);
   delay(32000); // each prayer is under 32 seconds
 }

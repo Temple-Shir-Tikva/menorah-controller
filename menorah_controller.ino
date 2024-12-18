@@ -4,16 +4,17 @@
 #include "sound_controller.h"
 #include "hanukkah_day.h"
 
-#define CANDLE_1_PIN 9
-#define CANDLE_2_PIN 8
-#define CANDLE_3_PIN 10 // pin 7 on the arduino is burnt out
-#define CANDLE_4_PIN 6
+#define CANDLE_1_PIN 6
+#define CANDLE_2_PIN 10 // pin 7 on the arduino is burnt out
+#define CANDLE_3_PIN 8 
+#define CANDLE_4_PIN 9
 #define CANDLE_5_PIN 5
 #define CANDLE_6_PIN 4
 #define CANDLE_7_PIN 3
 #define CANDLE_8_PIN 2
 
 #define BUTTON_PIN 13
+#define SERIAL_WAIT_TIME 100 // this is a pause so the terminal can catch up
 
 bool buttonState = LOW;
 byte hanukkahDay = 1;
@@ -42,6 +43,7 @@ void setup() {
   getHanukkahDayFromTime();
 
   Serial.println("Today we light the candles for day " + hanukkahDay);
+  delay(SERIAL_WAIT_TIME);
   lightCandles();
 }
 
@@ -52,6 +54,7 @@ void getHanukkahDayFromTime() {
 
   if (hanukkahDay == 0) {
     Serial.println("Today isn't Hanukkah. But we'll light the candles.");
+    delay(SERIAL_WAIT_TIME);
     hanukkahDay = 8;
     isActuallyHanukkah = false;
   } else {
@@ -120,42 +123,52 @@ void lightCandles() {
   };
 
   Serial.println((String)"Lighting Candles for Hanukkah day " + hanukkahDay);
+  delay(SERIAL_WAIT_TIME);
 
   if (isActuallyHanukkah) {
     // say the prayers
     Serial.println("בָּרוּךְ אַתָּה אֲדֹנָי אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֹתָיו וְצִוָּנוּ לְהַדְלִיק נֵר חֲנֻכָּה");
+    delay(SERIAL_WAIT_TIME);
     playFile(1);
     
     Serial.println("בָּרוּךְ אַתָּה אֲדֹנָי אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם שֶׁעָשָׂה נִסִּים לַאֲבוֹתֵינוּ בַּיָּמִים הָהֵם בִּזְּמַן הַזֶּה");
+    delay(SERIAL_WAIT_TIME);
     playFile(2);
     
     if (hanukkahDay == 1) {
       Serial.println("בָּרוּךְ אַתָּה אֲדֹנָי אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם שֶׁהֶחֱיָנוּ וְקִיְּמָנוּ וְהִגִּיעָנוּ לִזְּמַן הַזֶּה");
+      delay(SERIAL_WAIT_TIME);
       playFile(3);
     }
   }
 
   // set the candle state for each of the nights including this night to high, lighting from right to left
-  for (byte i = 7; i > 7 - hanukkahDay; i--) {
-    candleStates[i].state = LOW;
+  for (byte i = 8; i > 8 - hanukkahDay; i--) {
+    candleStates[i-1].state = LOW;
   }
 
   Serial.println("\n        | |");
+  delay(SERIAL_WAIT_TIME);
   // output the state of each candle to turn the relay on or off for each candle
   for (byte i = 0; i < 8; i++) {
     digitalWrite(candleStates[i].pin, candleStates[i].state);
     if (candleStates[i].state == LOW) {
       Serial.print("^");
+      delay(SERIAL_WAIT_TIME);
     } else {
       Serial.print("v");
+      delay(SERIAL_WAIT_TIME);
     }
     if (i == 3) {
       Serial.print("_|S|");
+      delay(SERIAL_WAIT_TIME);
     }
     if (i < 7) {
       Serial.print("_");
+      delay(SERIAL_WAIT_TIME);
     }
   }
   // print out the base
   Serial.println("\n      _-| |-_\n      -------");
+  delay(SERIAL_WAIT_TIME);
 }
