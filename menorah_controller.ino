@@ -139,7 +139,7 @@ void checkForCommandOnSerial() {
         }
       } else if (input == 4) {
         // test a hanukkah day w/ or w/out prayers
-        Serial.println(F("You Must Restart the Ardunno after using this command."));
+        Serial.println(F("You Must Restart the Arduino after using this command."));
         hanukkahDay = getSerialInput(TEST_DAY_MESSAGE);
         byte sayPrayers = getSerialInput(SAY_PRAYERS_MESSAGE);
         isNewHanukkahDay = false;
@@ -156,7 +156,7 @@ void checkForCommandOnSerial() {
         printMP3BoardDetail();
       } else if (input == 7) {
         // test one by one candle
-        Serial.println(F("You Must Restart the Ardunno after using this command."));
+        Serial.println(F("You Must Restart the Arduino after using this command."));
         for (byte i = 0; i < 9; i++) {
           digitalWrite(candleStates[i].pin, HIGH);
         }
