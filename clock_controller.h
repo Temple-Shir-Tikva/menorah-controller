@@ -5,3 +5,4 @@ void inputTime();
 byte getSerialInput(String message);
 void readTime(byte *second, byte *minute, byte *hour, byte *dayOfWeek, byte *dayOfMonth, byte *month, byte *year);
 void displayTime();
+String getDisplayTime();
