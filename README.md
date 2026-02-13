@@ -32,6 +32,7 @@ Set your terminal to pass no line ending on enter.
 4. Test A Hanukkah Day (with or without saying / playing prayers)
 5. Show the state of the menorah.
 6. Print MP3 Board Diagnostic Info.
+7. Test each candle 1 by 1.
 
 ## Parts List
 * DFPlayer Audio Music Module for Arduino https://www.amazon.com/dp/B08FFLH5XL?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1
