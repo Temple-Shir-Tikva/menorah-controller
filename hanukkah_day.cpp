@@ -14,7 +14,7 @@
 
 struct HanukkahDay
 {
-  byte yearOffset;  // 0-19, corresponding to number of years since 2024
+  byte yearOffset;  // 0-20, corresponding to number of years since 2024
   byte monthOffset; // 0 (Nov), 1 (Dec), 2 (Jan)
   byte day;         // 1-31
   byte hanukkahDay; // 1-8
