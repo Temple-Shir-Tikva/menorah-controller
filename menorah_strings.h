@@ -1,1 +1,20 @@
-#include "menorah_strings.cpp"
+#ifndef MENORAH_STRINGS_H
+#define MENORAH_STRINGS_H
+
+#define SPACE F(" ")
+#define SLASH F("/")
+#define COLON F(":")
+#define NEWLINE F("\n")
+#define UNDERSCORE F("_")
+#define LIT_CANDLE F("^")
+#define UNLIT_CANDLE F("v")
+#define MENORAH_BASE F("\n      _-| |-_\n      -------")
+#define DASHLINE F("------------------")
+#define INITIAL_TIMESTAMP F("00/00/00 00:00:00")
+#define TEST_DAY_MESSAGE F("Enter Hanukkah Day to test (1-8):\n")
+#define SAY_PRAYERS_MESSAGE F("Say Prayers? (1 = Yes, 0 = No)\n")
+#define CONTINUING_MESSAGE F("Continuing.")
+#define WAIT_TO_CONTINUE_MESSAGE F("The menorah should now be lit following the image.\nPlease reset the arduino to continue to normal operation.\n")
+#define DAY F("day")
+#define ZERO F("0")
+#endif
