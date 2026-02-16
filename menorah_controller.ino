@@ -116,8 +116,8 @@ void blankOutTerminal() {
 void checkForCommandOnSerial() {
   blankOutTerminal();
   Serial.println((String) getDisplayTime() + "\nCompile Time: " + DATE + TIME + F("\nThe Menorah was last lit: ") + lastLitTimeStamp + F("\n\nMain Menu\n1: Set Clock\n2: Display Time\n3: Play a prayer\n4: Test A Hanukkah Day (with or without prayers)\n5: Show the state of the menorah.\n6: Print MP3 Board Diagnostic Info.\n7: Test each candle 1 by 1.\n\nYou have 5 seconds to enter a command (press enter when done)"));
-  int start = millis();
-  int now = millis();
+  unsigned long start = millis();
+  unsigned long now = millis();
   while (now - start <= 5000) { 
     now = millis();
     if (Serial.available() > 0)  {
