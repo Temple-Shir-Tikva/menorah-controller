@@ -17,5 +17,4 @@
 #define WAIT_TO_CONTINUE_MESSAGE F("The menorah should now be lit following the image.\nPlease reset the arduino to continue to normal operation.\n")
 #define DAY F("day")
 #define ZERO F("0")
-
 #endif
