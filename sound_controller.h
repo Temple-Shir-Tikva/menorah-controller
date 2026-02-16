@@ -1,3 +1,3 @@
-void setupMP3Player();
+bool setupMP3Player();
 void playFile(int fileNumber);
-void printDetail();
+void printMP3BoardDetail();

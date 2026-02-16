@@ -2,9 +2,7 @@
 
 Load this code on an arduino to control a sainsmart relay board which can be used to automatically turn menorah lights on and off in succession.
 
-The controller will keep track of time and know which day of Hanukkah it is supposed to be (between 2024 and 2043).
-
-The button can be used to set the time if it is set incorrectly.
+The controller will keep track of time and know which day of Hanukkah it is supposed to be (between 2025 and 2043).
 
 ## During Hanukkah
 
@@ -15,10 +13,26 @@ It is also saying the prayers using an mp3 player module so someone listening co
 If the menorah is being controlled on non-hanukkah nights, it lights up all 8 candles
 
 ## Setting the time
+See Diagnostic Commands below for setting the time.
+
 The `inputTime()` method can be used to set the real time clock chip's time using the serial connection.  Be sure not to send double line endings by setting "No Line Ending" in the Arduino IDE.
 
 ## Prayer Sound Files
 The sound files should be copied to an SD card which is 32gb or less formatted in FAT16 or FAT32.  They should be names with 4 digits as the lead of the file name (e.g. `0001.mp3`) and placed in a folder named `mp3` in the root of the sd card.
+
+## Diagnostic Commands
+Upon menorah startup and once per loop, you have 5 seconds to input a command before it starts normal operations using the last set time.
+
+Set your terminal to pass no line ending on enter.
+
+### Menu of Commands
+1. Set Clock
+2. Display Time
+3. Play a prayer
+4. Test A Hanukkah Day (with or without saying / playing prayers)
+5. Show the state of the menorah.
+6. Print MP3 Board Diagnostic Info.
+7. Test each candle 1 by 1.
 
 ## Parts List
 * DFPlayer Audio Music Module for Arduino https://www.amazon.com/dp/B08FFLH5XL?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1
