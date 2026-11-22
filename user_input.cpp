@@ -1,11 +1,7 @@
 #include "Arduino.h"
 #include "menorah_strings.h"
 
-#ifndef SERIAL_WAIT_TIME
-#define SERIAL_WAIT_TIME 100
-#endif
-
-byte getSerialInput(String message)
+byte getSerialInput(const __FlashStringHelper *message)
 {
     Serial.print(message);
     delay(SERIAL_WAIT_TIME);
@@ -13,6 +9,7 @@ byte getSerialInput(String message)
     {
     } // wait for the user to send something
     byte temp = Serial.parseInt();
-    Serial.println((String)SPACE+temp);
+    Serial.print(F(" "));
+    Serial.println(temp);
     return temp;
 }

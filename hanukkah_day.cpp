@@ -1,9 +1,5 @@
 #include "Arduino.h"
 
-#ifndef SERIAL_WAIT_TIME
-#define SERIAL_WAIT_TIME 100
-#endif
-
 /**
   The struct stores every day of hanukkah between 2025 and 2043.
   The first number is the number of years away from 2024 (eg 2024 = 0, 2025 = 1, etc)
@@ -49,7 +45,7 @@ const HanukkahDay hanukkahDays[] PROGMEM = {
     {3, 1, 28, 5},
     {3, 1, 29, 6},
     {3, 1, 30, 7},
-    {4, 2, 1, 8}, // Corrected yearIndex to 4 for {4, 2, 1, 8}
+    {3, 1, 31, 8},
 
     // 2028
     {4, 1, 12, 1},
@@ -228,10 +224,39 @@ int getHanukkahDay(byte yearOffset, byte monthOffset, byte day)
     loadHanukkahDay(i, hday); // Fetch entry i from PROGMEM
     if (hday.yearOffset == yearOffset && hday.monthOffset == monthOffset && hday.day == day)
     {
-      Serial.println((String)F("Hanukkah Day: ") + hday.hanukkahDay);
-      delay(SERIAL_WAIT_TIME);
       return hday.hanukkahDay;
     }
   }
   return 0;
+}
+
+
+// Looks up a real calendar date (2-digit year, month 1-12, day 1-31).
+// Returns the night of Hanukkah (1-8), or 0 if the date isn't in the table.
+int getHanukkahDayForDate(byte year, byte month, byte day)
+{
+  if (year < 24)
+  {
+    return 0;
+  }
+
+  byte monthOffset;
+  if (month == 11)
+  {
+    monthOffset = 0;
+  }
+  else if (month == 12)
+  {
+    monthOffset = 1;
+  }
+  else if (month == 1)
+  {
+    monthOffset = 2;
+  }
+  else
+  {
+    return 0; // Hanukkah only falls in Nov, Dec, or Jan
+  }
+
+  return getHanukkahDay(year - 24, monthOffset, day);
 }

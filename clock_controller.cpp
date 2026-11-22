@@ -3,10 +3,6 @@
 #include "user_input.h"
 #include "menorah_strings.h"
 
-#ifndef SERIAL_WAIT_TIME
-#define SERIAL_WAIT_TIME 100
-#endif
-
 /**
 Code originally from https://www.instructables.com/Using-DS1307-and-DS3231-Real-time-Clock-Modules-Wi/
 **/
@@ -58,62 +54,68 @@ void readTime(byte *second, byte *minute, byte *hour, byte *dayOfWeek, byte *day
   *year = bcdToDec(Wire.read());
 }
 
-String getDisplayTime()
+static const char DAY_SUN[] PROGMEM = "Sunday";
+static const char DAY_MON[] PROGMEM = "Monday";
+static const char DAY_TUE[] PROGMEM = "Tuesday";
+static const char DAY_WED[] PROGMEM = "Wednesday";
+static const char DAY_THU[] PROGMEM = "Thursday";
+static const char DAY_FRI[] PROGMEM = "Friday";
+static const char DAY_SAT[] PROGMEM = "Saturday";
+static const char DAY_UNKNOWN[] PROGMEM = "???";
+static const char *const DAY_NAMES[] PROGMEM = {DAY_SUN, DAY_MON, DAY_TUE, DAY_WED, DAY_THU, DAY_FRI, DAY_SAT};
+
+// Writes the current RTC time into out, e.g. "Sunday 12/14/25 9:05:03".
+void formatDisplayTime(char *out, size_t outSize)
 {
   byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
-  // retrieve data from DS3231
-  readTime(&second, &minute, &hour, &dayOfWeek, &dayOfMonth, &month,
-           &year);
+  readTime(&second, &minute, &hour, &dayOfWeek, &dayOfMonth, &month, &year);
 
-  String outtime = "";
+  const char *dayName = (dayOfWeek >= 1 && dayOfWeek <= 7)
+                            ? (const char *)pgm_read_ptr(&DAY_NAMES[dayOfWeek - 1])
+                            : DAY_UNKNOWN;
 
-  switch (dayOfWeek)
+  snprintf_P(out, outSize, PSTR("%S %u/%u/%u %u:%02u:%02u"),
+             dayName, month, dayOfMonth, year, hour, minute, second);
+}
+
+static byte daysInMonth(byte month, byte year)
+{
+  static const byte DAYS[] PROGMEM = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  if (month < 1 || month > 12)
   {
-  case 1:
-    outtime = (String) outtime + F("Sun");
-    break;
-  case 2:
-    outtime = (String) outtime + F("Mon");
-    break;
-  case 3:
-    outtime = (String) outtime + F("Tues");
-    break;
-  case 4:
-    outtime = (String) outtime + F("Wednes");
-    break;
-  case 5:
-    outtime = (String) outtime + F("Thurs");
-    break;
-  case 6:
-    outtime = (String) outtime + F("Fri");
-    break;
-  case 7:
-    outtime = (String) outtime + F("Satur");
-    break;
+    return 31;
   }
-  
-  outtime = (String) outtime + DAY + SPACE + month + SLASH + dayOfMonth + SLASH + year + SPACE + hour + COLON;
-  
-  if (minute < 10)
+  if (month == 2 && year % 4 == 0) // valid for 2000-2099, which covers the RTC's range
   {
-    outtime = (String) outtime + ZERO;
+    return 29;
   }
-  
-  outtime = (String) outtime + minute + COLON;
+  return pgm_read_byte(&DAYS[month - 1]);
+}
 
-  if (second < 10)
+void previousDate(byte *year, byte *month, byte *day)
+{
+  if (*day > 1)
   {
-    outtime = (String) outtime + ZERO;
+    (*day)--;
+    return;
   }
-  
-  outtime = (String) outtime + second;
-
-  return outtime;
+  if (*month <= 1)
+  {
+    *month = 12;
+    (*year)--;
+  }
+  else
+  {
+    (*month)--;
+  }
+  *day = daysInMonth(*month, *year);
 }
 
 void displayTime()
 {
-  Serial.println(getDisplayTime());
+  char timeText[32];
+  formatDisplayTime(timeText, sizeof(timeText));
+  Serial.println(timeText);
   delay(SERIAL_WAIT_TIME);
 }
 
@@ -121,13 +123,13 @@ void inputTime()
 {
   Serial.println(F("inputTime: "));
   byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
-  year = getSerialInput("Enter Year (0 to 99)");
-  month = getSerialInput("Enter Month");
-  dayOfMonth = getSerialInput("Enter date (1 to 31)");
-  dayOfWeek = getSerialInput("Enter day of week (1=Sunday, 7=Saturday)");
-  hour = getSerialInput("Enter hour");
-  minute = getSerialInput("Enter minute");
-  second = getSerialInput("Enter second");
+  year = getSerialInput(F("Enter Year (0 to 99)"));
+  month = getSerialInput(F("Enter Month"));
+  dayOfMonth = getSerialInput(F("Enter date (1 to 31)"));
+  dayOfWeek = getSerialInput(F("Enter day of week (1=Sunday, 7=Saturday)"));
+  hour = getSerialInput(F("Enter hour"));
+  minute = getSerialInput(F("Enter minute"));
+  second = getSerialInput(F("Enter second"));
 
   setTime(second, minute, hour, dayOfWeek, dayOfMonth, month, year);
 
