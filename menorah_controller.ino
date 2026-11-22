@@ -186,8 +186,10 @@ bool showMenuAndRunCommand() {
   unsigned long start = millis();
   while (millis() - start <= MENU_IDLE_TIMEOUT_MS) {
     mp3Service();
-    if (Serial.available() > 0)  {
-      byte input = getSerialInput(NEWLINE);
+    if (serialNumberPending())  {
+      byte input = readSerialNumber();
+      Serial.print(F("> "));
+      Serial.println(input);
 
       if (input == 0) {
         return false;
@@ -216,7 +218,7 @@ bool showMenuAndRunCommand() {
           byte sayPrayers = getSerialInput(SAY_PRAYERS_MESSAGE);
           hanukkahDay = testDay;
           lightCandles(sayPrayers == 1, /*recordPrayers = */ false);
-          getSerialInput(WAIT_TO_CONTINUE_MESSAGE);
+          waitForSerialKey(WAIT_TO_CONTINUE_MESSAGE);
           restoreRealMenorahState();
         }
       } else if (input == 5) {

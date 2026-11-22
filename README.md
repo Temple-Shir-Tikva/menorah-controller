@@ -17,7 +17,7 @@ If the menorah is being controlled on non-hanukkah nights, it lights up all 8 ca
 ## Setting the time
 See Diagnostic Commands below for setting the time.
 
-The `inputTime()` method can be used to set the real time clock chip's time using the serial connection.  Be sure not to send double line endings by setting "No Line Ending" in the Arduino IDE.
+The `inputTime()` method can be used to set the real time clock chip's time using the serial connection.  Any line-ending setting in the serial monitor works.
 
 ## Prayer Sound Files
 The sound files should be copied to an SD card which is 32gb or less formatted in FAT16 or FAT32.  They should be names with 4 digits as the lead of the file name (e.g. `0001.mp3`) and placed in a folder named `mp3` in the root of the sd card.
@@ -26,8 +26,6 @@ The sound files should be copied to an SD card which is 32gb or less formatted i
 The menorah runs normally from power-up. To enter diagnostic mode, send any character over the serial monitor at any time. Normal operation pauses while the menu is open, and resumes when you choose `0` (Exit) or after 60 seconds with no input.
 
 If the menorah is in the middle of lighting (e.g. a prayer is playing), the menu opens when that finishes.
-
-Set your terminal to pass no line ending on enter.
 
 ### Menu of Commands
 0. Exit (resume normal operation)
