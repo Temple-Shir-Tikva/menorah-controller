@@ -31,7 +31,6 @@ DFRobotDFPlayerMini myDFPlayer;
 #define MP3_SETTLE_MS 200          // pause between "online" and sending settings
 #define MP3_MAX_ATTEMPTS 5         // attempts per round before backing off
 #define MP3_RETRY_PAUSE_MS 30000   // pause between rounds of attempts
-#define MP3_MIN_FILES 3            // the three prayers
 
 enum Mp3State { MP3_BOOTING, MP3_AWAIT_ONLINE, MP3_SETTLING, MP3_READY, MP3_BACKOFF };
 
@@ -119,16 +118,11 @@ void mp3Service()
       myDFPlayer.volume(30);
       myDFPlayer.EQ(DFPLAYER_EQ_NORMAL);
       myDFPlayer.outputDevice(DFPLAYER_DEVICE_SD);
-      int files = myDFPlayer.readFileCounts();
-      if (files < MP3_MIN_FILES)
-      {
-        mp3Fail(F("too few files found on SD card (need /mp3/0001-0003)"));
-      }
-      else
-      {
-        Serial.println(F("mp3 initialized"));
-        mp3SetState(MP3_READY);
-      }
+      // The "card online" event already proved the SD card mounted.  We don't gate on
+      // readFileCounts(): it isn't reliable on these boards.  A missing prayer file shows
+      // up as an error event when it is played (see playFile()).
+      Serial.println(F("mp3 initialized"));
+      mp3SetState(MP3_READY);
     }
     break;
 
@@ -225,7 +219,7 @@ void printMP3BoardDetail()
   printLabeled(F("State: "), myDFPlayer.readState());
   printLabeled(F("Volume: "), myDFPlayer.readVolume());
   printLabeled(F("EQ: "), myDFPlayer.readEQ());
-  printLabeled(F("FileCounts: "), myDFPlayer.readFileCounts());
+  printLabeled(F("FileCounts (unreliable on some boards): "), myDFPlayer.readFileCounts());
   printLabeled(F("File Number: "), myDFPlayer.readCurrentFileNumber());
   Serial.println(DASHLINE);
 
