@@ -9,6 +9,8 @@ The controller will keep track of time and know which day of Hanukkah it is supp
 If you are monitoring the serial output of the arduino, you will see it display what it thinks the menorah is supposed to be showing and see that it is saying the prayers before lighting the candles just in case no one else is there to say them.
 It is also saying the prayers using an mp3 player module so someone listening could hear it speaking the prayers.
 
+If the menorah reboots during the evening (e.g. a power blip), it relights the candles but does not repeat the prayers.  The date the prayers were last said is stored in 3 bytes of EEPROM, written about once per night, which is far below the chip's ~100,000-write rating.  Between 8pm and 10am the menorah never says new prayers, and the hours after midnight still count as the previous night.
+
 ## Other nights
 If the menorah is being controlled on non-hanukkah nights, it lights up all 8 candles
 
@@ -21,11 +23,14 @@ The `inputTime()` method can be used to set the real time clock chip's time usin
 The sound files should be copied to an SD card which is 32gb or less formatted in FAT16 or FAT32.  They should be names with 4 digits as the lead of the file name (e.g. `0001.mp3`) and placed in a folder named `mp3` in the root of the sd card.
 
 ## Diagnostic Commands
-Upon menorah startup and once per loop, you have 5 seconds to input a command before it starts normal operations using the last set time.
+The menorah runs normally from power-up. To enter diagnostic mode, send any character over the serial monitor at any time. Normal operation pauses while the menu is open, and resumes when you choose `0` (Exit) or after 60 seconds with no input.
+
+If the menorah is in the middle of lighting (e.g. a prayer is playing), the menu opens when that finishes.
 
 Set your terminal to pass no line ending on enter.
 
 ### Menu of Commands
+0. Exit (resume normal operation)
 1. Set Clock
 2. Display Time
 3. Play a prayer

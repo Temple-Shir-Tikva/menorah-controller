@@ -2,6 +2,13 @@
 #include <Wire.h>
 #include "Menorah.h"
 
+void runDiagnosticMenu();
+void lightCandles(bool sayPrayers, bool recordPrayers);
+void lightForRealDay();
+bool showMenuAndRunCommand();
+void writeCandlePins();
+void restoreRealMenorahState();
+
 // 12 & 11 are the mp3 board
 // a4 a5 are the rtc board, unless this board has dedicated SDA and SCL pins, in which case, use those.
 #define CANDLE_1_PIN 6
@@ -14,18 +21,25 @@
 #define CANDLE_8_PIN 2
 #define CANDLE_SHAMASH_PIN 13
 
-#define SERIAL_WAIT_TIME 100 // this is a pause so the terminal can catch up
+#define MENU_IDLE_TIMEOUT_MS 60000UL
 
-#define QUIET_HOURS_START_HOUR 20
-#define QUIET_HOURS_END_HOUR 10
+#define QUIET_HOURS_START_HOUR 20 // from this hour on, a reboot won't repeat the prayers
+#define QUIET_HOURS_END_HOUR 10   // before this hour it is still last evening's menorah
+#define CLOCK_CHECK_INTERVAL_MS 1000UL
+
+// EEPROM layout: 3 bytes holding the date (year, month, day) the prayers were last said, so a
+// power blip mid-evening doesn't repeat them.  EEPROM.update() only writes bytes that changed,
+// so this is roughly one write per night; the EEPROM is rated for ~100,000 writes per cell.
+#define PRAYER_RECORD_ADDRESS 0
 
 #define DATE __DATE__
 #define TIME __TIME__
 
 byte hanukkahDay = 1;
 bool isNewHanukkahDay = false;
-bool soundBoardPresent = true;
-String lastLitTimeStamp = INITIAL_TIMESTAMP;
+#define MP3_PRAYER_WAIT_MS 10000 // max extra wait for the mp3 board before skipping prayers
+char lastLitTimeStamp[32] = "00/00/00 00:00:00";
+byte todayYear = 0, todayMonth = 0, todayDay = 0; // set by getHanukkahDayFromTime()
 
 struct CandleState {
   byte pin;
@@ -45,65 +59,95 @@ CandleState candleStates[] = {
 };
 
 void setup() {
-  pinMode(CANDLE_1_PIN, OUTPUT);
-  pinMode(CANDLE_2_PIN, OUTPUT);
-  pinMode(CANDLE_3_PIN, OUTPUT);
-  pinMode(CANDLE_4_PIN, OUTPUT);
-  pinMode(CANDLE_5_PIN, OUTPUT);
-  pinMode(CANDLE_6_PIN, OUTPUT);
-  pinMode(CANDLE_7_PIN, OUTPUT);
-  pinMode(CANDLE_8_PIN, OUTPUT);
-  pinMode(CANDLE_SHAMASH_PIN, OUTPUT);
+  // Drive each relay pin HIGH (off) *before* making it an output, so the relays never see a glitch.
+  for (byte i = 0; i < 9; i++) {
+    digitalWrite(candleStates[i].pin, HIGH);
+    pinMode(candleStates[i].pin, OUTPUT);
+  }
 
-  blankOutCandles();
   Wire.begin();
   Serial.begin(9600);
-  
-  checkForCommandOnSerial();
+  blankOutCandles();
 
-  soundBoardPresent = setupMP3Player();
+  // Start the mp3 board booting now; it is serviced from loop() and lightCandles().
+  mp3Begin();
+
+  Serial.println(F("Menorah starting. Send any character at any time to open the diagnostic menu."));
 
   getHanukkahDayFromTime();
 
-  lightCandles();
+  lightForRealDay();
 }
 
 void getHanukkahDayFromTime() {
   byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
   readTime(&second, &minute, &hour, &dayOfWeek, &dayOfMonth, &month, &year);
+  todayYear = year;
+  todayMonth = month;
+  todayDay = dayOfMonth;
 
-  hanukkahDay = getHanukkahDay(year - 24, month - 11, dayOfMonth);
+  // The menorah is lit in the evening, so the small hours of the morning still
+  // belong to the previous date's night.
+  byte nightYear = year, nightMonth = month, nightDay = dayOfMonth;
+  if (hour < QUIET_HOURS_END_HOUR) {
+    previousDate(&nightYear, &nightMonth, &nightDay);
+  }
+
+  hanukkahDay = getHanukkahDayForDate(nightYear, nightMonth, nightDay);
+  bool quietHours = (hour >= QUIET_HOURS_START_HOUR) || (hour < QUIET_HOURS_END_HOUR);
 
   if (hanukkahDay == 0) {
-    Serial.println(F("Today isn't Hanukkah. But we'll light the candles."));
-    delay(SERIAL_WAIT_TIME);
+    // Not Hanukkah: light all 8 candles, no prayers.
     hanukkahDay = 8;
     isNewHanukkahDay = false;
-  } else if ((hour > QUIET_HOURS_START_HOUR) || (hour < QUIET_HOURS_END_HOUR)) { 
-    // Get Yesterday's Hanukkah Day
-    if (dayOfMonth != 1) {
-      hanukkahDay = getHanukkahDay(year - 24, month - 11, dayOfMonth - 1);
-    } else if (month != 11) {
-      hanukkahDay = getHanukkahDay(year - 24, month - 10, 31);
-    } else {
-      hanukkahDay = getHanukkahDay(year - 24, month - 10, 30);
-    }
-
-    Serial.println(F("It's during quiet hours.  We don't count this as a new Hanukkah Day."));
-    isNewHanukkahDay = false;
   } else {
-    isNewHanukkahDay = true;
+    // Prayers are only for a fresh lighting, not for a reboot during quiet hours.
+    isNewHanukkahDay = !quietHours;
   }
 }
 
+bool prayersAlreadySaidToday() {
+  return EEPROM.read(PRAYER_RECORD_ADDRESS) == todayYear
+      && EEPROM.read(PRAYER_RECORD_ADDRESS + 1) == todayMonth
+      && EEPROM.read(PRAYER_RECORD_ADDRESS + 2) == todayDay;
+}
+
+void recordPrayersSaidToday() {
+  EEPROM.update(PRAYER_RECORD_ADDRESS, todayYear);
+  EEPROM.update(PRAYER_RECORD_ADDRESS + 1, todayMonth);
+  EEPROM.update(PRAYER_RECORD_ADDRESS + 2, todayDay);
+}
+
+// Light the menorah for the real (clock-derived) day, saying the prayers only if they're due.
+void lightForRealDay() {
+  bool sayPrayers = isNewHanukkahDay && !prayersAlreadySaidToday();
+  if (isNewHanukkahDay && !sayPrayers) {
+    Serial.println(F("Prayers were already said tonight; not repeating them."));
+  }
+  lightCandles(sayPrayers, /*recordPrayers = */ true);
+}
+
 void loop() {
-  checkForCommandOnSerial();
+  mp3Service();
+
+  // Any serial input interrupts normal operation and opens the diagnostic menu.
+  if (Serial.available() > 0) {
+    runDiagnosticMenu();
+  }
+
+  // Check the clock once a second rather than as fast as the loop can spin.
+  static unsigned long lastClockCheck = 0;
+  if (millis() - lastClockCheck < CLOCK_CHECK_INTERVAL_MS) {
+    return;
+  }
+  lastClockCheck = millis();
+
   byte lastHanukkahDay = hanukkahDay;
   getHanukkahDayFromTime();
 
   // If this is a new hanukkah day or we haven't lit the menorah yet at all (or somehow got into a bad state, because the Shamash should always be lit)
   if ((lastHanukkahDay != hanukkahDay) || (candleStates[8].state == HIGH))  {
-    lightCandles();
+    lightForRealDay();
   }
 }
 
@@ -113,15 +157,41 @@ void blankOutTerminal() {
   }
 }
 
-void checkForCommandOnSerial() {
+void runDiagnosticMenu() {
+  // discard whatever keystroke(s) triggered the menu
+  delay(50);
+  while (Serial.available() > 0) {
+    Serial.read();
+  }
+
+  while (showMenuAndRunCommand()) {
+  }
+  Serial.println(CONTINUING_MESSAGE);
+}
+
+// Shows the menu and runs one command.  Returns false to leave diagnostic mode
+// (command 0, or no input for MENU_IDLE_TIMEOUT_MS).
+bool showMenuAndRunCommand() {
   blankOutTerminal();
-  Serial.println((String) getDisplayTime() + "\nCompile Time: " + DATE + TIME + F("\nThe Menorah was last lit: ") + lastLitTimeStamp + F("\n\nMain Menu\n1: Set Clock\n2: Display Time\n3: Play a prayer\n4: Test A Hanukkah Day (with or without prayers)\n5: Show the state of the menorah.\n6: Print MP3 Board Diagnostic Info.\n7: Test each candle 1 by 1.\n\nYou have 5 seconds to enter a command (press enter when done)"));
+  char timeText[32];
+  formatDisplayTime(timeText, sizeof(timeText));
+  Serial.println(timeText);
+  Serial.print(F("Compile Time: "));
+  Serial.print(F(DATE));
+  Serial.print(F(" "));
+  Serial.println(F(TIME));
+  Serial.print(F("The Menorah was last lit: "));
+  Serial.println(lastLitTimeStamp);
+  Serial.println(F("\nMain Menu\n0: Exit (resume normal operation)\n1: Set Clock\n2: Display Time\n3: Play a prayer\n4: Test A Hanukkah Day (with or without prayers)\n5: Show the state of the menorah.\n6: Print MP3 Board Diagnostic Info.\n7: Test each candle 1 by 1.\n\nEnter a command (press enter when done). Menu exits after 60 seconds of inactivity."));
   unsigned long start = millis();
-  unsigned long now = millis();
-  while (now - start <= 5000) { 
-    now = millis();
+  while (millis() - start <= MENU_IDLE_TIMEOUT_MS) {
+    mp3Service();
     if (Serial.available() > 0)  {
       byte input = getSerialInput(NEWLINE);
+
+      if (input == 0) {
+        return false;
+      }
 
       // this can be expanded with other commands.
       if (input == 1) {
@@ -132,22 +202,23 @@ void checkForCommandOnSerial() {
         displayTime();
       } else if (input == 3) {
         // play a sound
-        if (soundBoardPresent) {
+        if (mp3Ready()) {
           playFile(1);
         } else {
           Serial.println(F("Sound Board Not Present.  If you believe this is an error, check code and wiring."));
         }
       } else if (input == 4) {
-        // test a hanukkah day w/ or w/out prayers
-        Serial.println(F("You Must Restart the Arduino after using this command."));
-        hanukkahDay = getSerialInput(TEST_DAY_MESSAGE);
-        byte sayPrayers = getSerialInput(SAY_PRAYERS_MESSAGE);
-        isNewHanukkahDay = false;
-        if (sayPrayers == 1) {
-          isNewHanukkahDay = true;
+        // test a hanukkah day w/ or w/out prayers, then restore the real state
+        byte testDay = getSerialInput(TEST_DAY_MESSAGE);
+        if (testDay < 1 || testDay > 8) {
+          Serial.println(F("Day must be between 1 and 8."));
+        } else {
+          byte sayPrayers = getSerialInput(SAY_PRAYERS_MESSAGE);
+          hanukkahDay = testDay;
+          lightCandles(sayPrayers == 1, /*recordPrayers = */ false);
+          getSerialInput(WAIT_TO_CONTINUE_MESSAGE);
+          restoreRealMenorahState();
         }
-        lightCandles();
-        byte waitToContinue = getSerialInput(WAIT_TO_CONTINUE_MESSAGE);
       } else if (input == 5) {
         // print the state of the menorah
         printMenorahToSerial();
@@ -155,8 +226,7 @@ void checkForCommandOnSerial() {
         // get mp3 board diagnostics
         printMP3BoardDetail();
       } else if (input == 7) {
-        // test one by one candle
-        Serial.println(F("You Must Restart the Arduino after using this command."));
+        // test one by one candle, then put the relays back to match the menorah state
         for (byte i = 0; i < 9; i++) {
           digitalWrite(candleStates[i].pin, HIGH);
         }
@@ -165,43 +235,52 @@ void checkForCommandOnSerial() {
           delay(1000);
           digitalWrite(candleStates[i].pin, HIGH);
         }
+        writeCandlePins();
       }
+      return true; // command handled; redisplay the menu
     }
   }
-  Serial.println(CONTINUING_MESSAGE);
+  return false; // idle timeout
+}
+
+// Drive the relays from candleStates (used after a test that touched the pins directly).
+void writeCandlePins() {
+  for (byte i = 0; i < 9; i++) {
+    digitalWrite(candleStates[i].pin, candleStates[i].state);
+  }
+}
+
+// After a test day, re-derive the real Hanukkah day from the clock and relight
+// without repeating the prayers.
+void restoreRealMenorahState() {
+  getHanukkahDayFromTime();
+  lightCandles(false, /*recordPrayers = */ false);
 }
 
 void printMenorahToSerial() {
-  Serial.print(F("\n         "));
-  delay(SERIAL_WAIT_TIME);
-  if (candleStates[8].state == LOW) {
-    Serial.print(LIT_CANDLE);
-  } else {
-    Serial.print(UNLIT_CANDLE);
-  }
-  delay(SERIAL_WAIT_TIME);
-  Serial.println(F("\n        | |"));
-  delay(SERIAL_WAIT_TIME);
-
+  // build the candle row in one buffer: c_c_c_c_|S|_c_c_c_c
+  char row[24];
+  byte n = 0;
   for (byte i = 0; i < 8; i++) {
-    if (candleStates[i].state == LOW) {
-      Serial.print(LIT_CANDLE);
-      delay(SERIAL_WAIT_TIME);
-    } else {
-      Serial.print(UNLIT_CANDLE);
-      delay(SERIAL_WAIT_TIME);
-    }
+    row[n++] = (candleStates[i].state == LOW) ? LIT_CANDLE : UNLIT_CANDLE;
     if (i == 3) {
-      Serial.print(F("_|S|"));
-      delay(SERIAL_WAIT_TIME);
+      row[n++] = '_';
+      row[n++] = '|';
+      row[n++] = 'S';
+      row[n++] = '|';
     }
     if (i < 7) {
-      Serial.print(UNDERSCORE);
-      delay(SERIAL_WAIT_TIME);
+      row[n++] = '_';
     }
   }
-  // print out the base
+  row[n] = '\0';
+
+  Serial.print(F("\n         "));
+  Serial.println((candleStates[8].state == LOW) ? LIT_CANDLE : UNLIT_CANDLE);
+  Serial.println(F("        | |"));
+  Serial.print(row);
   Serial.println(MENORAH_BASE);
+  delay(SERIAL_WAIT_TIME);
 }
 
 void blankOutCandles() {
@@ -211,35 +290,42 @@ void blankOutCandles() {
     digitalWrite(candleStates[i].pin, candleStates[i].state);
   }
 
-  lastLitTimeStamp = getDisplayTime();
+  formatDisplayTime(lastLitTimeStamp, sizeof(lastLitTimeStamp));
 }
 
-void lightCandles() {
+void lightCandles(bool sayPrayers, bool recordPrayers) {
 
-  lastLitTimeStamp = getDisplayTime();
-  Serial.println((String)F("Lighting Candles for Hanukkah day ") + hanukkahDay);
+  formatDisplayTime(lastLitTimeStamp, sizeof(lastLitTimeStamp));
+  Serial.print(F("Lighting Candles for Hanukkah day "));
+  Serial.println(hanukkahDay);
   delay(SERIAL_WAIT_TIME);
 
   // Start with all candles (other than Shamash) unlit
   blankOutCandles();
 
-  if (isNewHanukkahDay) {
-    // say the prayers
+  if (sayPrayers) {
+    // say the prayers (give the mp3 board a bounded chance to finish booting, then move on)
+    bool prayersAudible = mp3WaitReady(MP3_PRAYER_WAIT_MS);
+    if (!prayersAudible) {
+      Serial.println(F("mp3 board not ready; lighting without audio prayers."));
+    } else if (recordPrayers) {
+      recordPrayersSaidToday();
+    }
     Serial.println(F("בָּרוּךְ אַתָּה אֲדֹנָי אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֹתָיו וְצִוָּנוּ לְהַדְלִיק נֵר חֲנֻכָּה"));
     delay(SERIAL_WAIT_TIME);
-    if (soundBoardPresent) {
+    if (prayersAudible) {
       playFile(1);
     }
 
     Serial.println(F("בָּרוּךְ אַתָּה אֲדֹנָי אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם שֶׁעָשָׂה נִסִּים לַאֲבוֹתֵינוּ בַּיָּמִים הָהֵם בִּזְּמַן הַזֶּה"));
     delay(SERIAL_WAIT_TIME);
-    if (soundBoardPresent) {
+    if (prayersAudible) {
       playFile(2);
     }
     if (hanukkahDay == 1) {
       Serial.println(F("בָּרוּךְ אַתָּה אֲדֹנָי אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם שֶׁהֶחֱיָנוּ וְקִיְּמָנוּ וְהִגִּיעָנוּ לִזְּמַן הַזֶּה"));
       delay(SERIAL_WAIT_TIME);
-      if (soundBoardPresent) {
+      if (prayersAudible) {
         playFile(3);
       }
     }
