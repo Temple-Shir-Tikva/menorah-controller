@@ -1,11 +1,17 @@
 #include "Arduino.h"
 
 /**
-  The struct stores every day of hanukkah between 2025 and 2043.
-  The first number is the number of years away from 2024 (eg 2024 = 0, 2025 = 1, etc)
-  The second number is the month
-  The third number is the day of the month (0 = Nov, 1 = Dec, 2 = Jan)
-  The return value is what night of hanukkah it is. (or 0 if it isn't)
+  The table below stores every night of Hanukkah between 2025 and 2043.
+  *** EXTEND IT BEFORE HANUKKAH 2044: past the last row, no date matches and the
+  *** menorah lights all eight candles with no prayers. See README.md.
+  Each row is {yearOffset, monthOffset, day, hanukkahDay}:
+    yearOffset  - the year minus 2024 (2024 = 0, 2025 = 1, ...). A January row uses January's own year.
+    monthOffset - 0 = November, 1 = December, 2 = January
+    day         - day of the month
+    hanukkahDay - which night of Hanukkah it is (1-8)
+  Each row is the EVENING the candles are lit (night 1 is the evening before 25 Kislev).
+  Lookups return 0 for a date that isn't a Hanukkah night.
+  Check or extend the table with tools/verify_hanukkah_table.py.
 **/
 
 struct HanukkahDay

@@ -1,3 +1,14 @@
+/**
+  Menorah controller: lights a relay-driven menorah for the right night of Hanukkah,
+  saying the blessings through a DFPlayer Mini first.  See README.md and docs/wiring_diagram.svg.
+
+  Pins in use:
+    D2-D6, D8-D10 and D13 - relay board inputs (active LOW), see candleStates[] below
+    D11 / D12             - DFPlayer Mini (soft serial; set in sound_controller.cpp)
+    A4 / A5 (SDA / SCL)   - DS3231 real-time clock (use the dedicated SDA/SCL pins on boards that have them)
+    USB serial, 9600      - diagnostic menu: send any character to open it
+**/
+
 #include <EEPROM.h>
 #include <Wire.h>
 #include "Menorah.h"
@@ -9,8 +20,7 @@ bool showMenuAndRunCommand();
 void writeCandlePins();
 void restoreRealMenorahState();
 
-// 12 & 11 are the mp3 board
-// a4 a5 are the rtc board, unless this board has dedicated SDA and SCL pins, in which case, use those.
+
 #define CANDLE_1_PIN 6
 #define CANDLE_2_PIN 10 // pin 7 on the original arduino was burnt out
 #define CANDLE_3_PIN 8
